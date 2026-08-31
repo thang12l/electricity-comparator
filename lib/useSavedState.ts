@@ -94,5 +94,5 @@ export function useSavedState() {
     return () => window.clearTimeout(timer);
   }, [state, hydrated]);
 
-  return { state, setState, hydrated, formKey: seenHydration ? "ready" : "boot" };
+  return { state, setState, hydrated };
 }
