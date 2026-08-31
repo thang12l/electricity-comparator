@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import type { UsageProfile } from "@/lib/types";
 import { parseNonNegative } from "@/lib/format";
 import type { UsageMode } from "@/lib/useSavedState";
-import { Field } from "@base-ui/react/field";
 
 type Props = {
   profile: UsageProfile;
@@ -35,12 +34,14 @@ function NumberField({
   const [error, setError] = useState<string | undefined>();
 
   return (
-    <Field.Root className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
+        name={id}
         type="text"
         inputMode="decimal"
+        autoComplete="off"
         value={raw}
         aria-invalid={Boolean(error)}
         onChange={(event) => {
@@ -53,7 +54,7 @@ function NumberField({
       />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </Field.Root>
+    </div>
   );
 }
 

@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Field } from "@base-ui/react/field";
 
 type Props = {
   showUsage: boolean;
@@ -31,20 +30,18 @@ function SplitControl({
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor={id}>{label}</Label>
         <div className="flex items-center gap-1.5">
-          <Field.Root>
-            <Input
-              id={id}
-              type="text"
-              inputMode="numeric"
-              className="w-16"
-              value={String(value)}
-              onChange={(event) => {
-                const n = Number(event.target.value);
-                if (!Number.isFinite(n)) return;
-                onChange(Math.min(100, Math.max(0, n)));
-              }}
-            />
-          </Field.Root>
+          <Input
+            id={id}
+            type="text"
+            inputMode="numeric"
+            className="w-16"
+            value={String(value)}
+            onChange={(event) => {
+              const n = Number(event.target.value);
+              if (!Number.isFinite(n)) return;
+              onChange(Math.min(100, Math.max(0, n)));
+            }}
+          />
           <span className="text-sm text-muted-foreground">%</span>
         </div>
       </div>

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Field as FieldRoot } from "@base-ui/react/field";
 
 type Props = {
   initial?: ProviderPlan;
@@ -33,7 +32,7 @@ function Field({
   required?: boolean;
 }) {
   return (
-    <FieldRoot.Root className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>
         {label}
         {required ? <span className="text-destructive"> *</span> : null}
@@ -49,7 +48,7 @@ function Field({
       />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </FieldRoot.Root>
+    </div>
   );
 }
 
@@ -154,7 +153,7 @@ export function CustomPlanForm({ initial, onSave, onCancel }: Props) {
       }}
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <FieldRoot.Root className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="provider-name">
             Provider name <span className="text-destructive">*</span>
           </Label>
@@ -168,8 +167,8 @@ export function CustomPlanForm({ initial, onSave, onCancel }: Props) {
           {errors.providerName ? (
             <p className="text-xs text-destructive">{errors.providerName}</p>
           ) : null}
-        </FieldRoot.Root>
-        <FieldRoot.Root className="flex flex-col gap-1.5">
+        </div>
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="plan-name">Plan name</Label>
           <Input
             id="plan-name"
@@ -177,7 +176,7 @@ export function CustomPlanForm({ initial, onSave, onCancel }: Props) {
             onChange={(event) => setPlanName(event.target.value)}
             placeholder="Optional"
           />
-        </FieldRoot.Root>
+        </div>
       </div>
 
       <Field
@@ -282,7 +281,7 @@ export function CustomPlanForm({ initial, onSave, onCancel }: Props) {
         />
       </div>
 
-      <FieldRoot.Root className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="plan-notes">Notes</Label>
         <Input
           id="plan-notes"
@@ -290,7 +289,7 @@ export function CustomPlanForm({ initial, onSave, onCancel }: Props) {
           onChange={(event) => setNotes(event.target.value)}
           placeholder="e.g. referral discount not included"
         />
-      </FieldRoot.Root>
+      </div>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
