@@ -1,8 +1,11 @@
 "use client";
 
 import type { BillResult, ProviderPlan } from "@/lib/types";
-import { breakdownFromResult, comparisonPair } from "@/lib/chart/stack";
-import { StackedPairChart } from "@/components/StackedPairChart";
+import {
+  breakdownFromResult,
+  orderedChartPlans,
+} from "@/lib/chart/stack";
+import { StackedPlansChart } from "@/components/StackedPlansChart";
 
 type Props = {
   plans: ProviderPlan[];
@@ -11,30 +14,26 @@ type Props = {
 };
 
 export function ComparisonChart({ plans, results, currentPlanId }: Props) {
-  const { current, target } = comparisonPair(plans, currentPlanId);
-  if (!current) return null;
-  if (!target) {
+  const chartPlans = orderedChartPlans(plans, currentPlanId);
+  if (chartPlans.length === 0) return null;
+  if (chartPlans.length === 1) {
     return (
       <p className="text-sm text-muted-foreground">
-        Select another plan to compare as a stacked pair.
+        Select another plan to compare stacked bill totals.
       </p>
     );
   }
 
   const resultByPlan = new Map(results.map((result) => [result.planId, result]));
+  const breakdowns = Object.fromEntries(
+    chartPlans.map((plan) => [plan.id, breakdownFromResult(resultByPlan.get(plan.id))]),
+  );
 
   return (
-    <StackedPairChart
+    <StackedPlansChart
       heightClass="h-64"
-      currentLabel={current.providerName}
-      targetLabel={target.providerName}
-      rows={[
-        {
-          label: "Bill total",
-          current: breakdownFromResult(resultByPlan.get(current.id)),
-          target: breakdownFromResult(resultByPlan.get(target.id)),
-        },
-      ]}
+      plans={chartPlans}
+      rows={[{ label: "Bill total", breakdowns }]}
     />
   );
 }

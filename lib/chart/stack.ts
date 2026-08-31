@@ -11,8 +11,7 @@ export type StackKey =
 export type StackItem = {
   key: StackKey;
   label: string;
-  currentFill: string;
-  targetFill: string;
+  fills: [string, string, string];
   negative?: boolean;
 };
 
@@ -22,49 +21,54 @@ export const STACK_ITEMS: StackItem[] = [
   {
     key: "usageCharges",
     label: "Usage charges",
-    currentFill: "#3f5f56",
-    targetFill: "#a8c4bc",
+    fills: ["#3f5f56", "#a8c4bc", "#d8ebe4"],
   },
   {
     key: "dailySupplyCharges",
     label: "Daily supply",
-    currentFill: "#4b5563",
-    targetFill: "#c5cbd3",
+    fills: ["#4b5563", "#c5cbd3", "#e8ebef"],
   },
   {
     key: "retailerFees",
     label: "Retailer fees",
-    currentFill: "#57534e",
-    targetFill: "#d6d0c8",
+    fills: ["#57534e", "#d6d0c8", "#efeae4"],
   },
   {
     key: "oneOffFees",
     label: "One-off fees",
-    currentFill: "#564d63",
-    targetFill: "#cdc6d8",
+    fills: ["#564d63", "#cdc6d8", "#ebe6f0"],
   },
   {
     key: "gst",
     label: "GST added",
-    currentFill: "#3f4a58",
-    targetFill: "#b7c0cb",
+    fills: ["#3f4a58", "#b7c0cb", "#e2e7ed"],
   },
   {
     key: "exportCredits",
     label: "Export credits",
-    currentFill: "#2f5d4a",
-    targetFill: "#9dccb6",
+    fills: ["#2f5d4a", "#9dccb6", "#cce9d8"],
     negative: true,
   },
 ];
 
-export function comparisonPair(
+export type ChartPlan = {
+  id: string;
+  label: string;
+  isCurrent: boolean;
+};
+
+export function orderedChartPlans(
   plans: ProviderPlan[],
   currentPlanId: string | null,
-): { current?: ProviderPlan; target?: ProviderPlan } {
-  const current = plans.find((plan) => plan.id === currentPlanId) ?? plans[0];
-  const target = plans.find((plan) => plan.id !== current?.id);
-  return { current, target };
+): ChartPlan[] {
+  const current = plans.find((plan) => plan.id === currentPlanId);
+  const rest = plans.filter((plan) => plan.id !== currentPlanId);
+  const ordered = current ? [current, ...rest] : plans;
+  return ordered.map((plan) => ({
+    id: plan.id,
+    label: plan.providerName,
+    isCurrent: plan.id === currentPlanId,
+  }));
 }
 
 export function breakdownFromResult(result: BillResult | undefined): StackBreakdown {
@@ -83,14 +87,40 @@ export function stackChartValue(item: StackItem, breakdown: StackBreakdown): num
   return item.negative ? -value : value;
 }
 
+export function fillForPlan(item: StackItem, planIndex: number): string {
+  const tier = Math.min(planIndex, item.fills.length - 1);
+  return item.fills[tier]!;
+}
+
 export function usedStackItems(
-  rows: Array<{ current: StackBreakdown; target: StackBreakdown }>,
+  rows: Array<{ breakdowns: Record<string, StackBreakdown> }>,
+  planIds: string[],
 ): StackItem[] {
   return STACK_ITEMS.filter((item) =>
-    rows.some(
-      (row) =>
-        Math.abs(stackChartValue(item, row.current)) > 0.0005 ||
-        Math.abs(stackChartValue(item, row.target)) > 0.0005,
+    rows.some((row) =>
+      planIds.some(
+        (planId) =>
+          Math.abs(stackChartValue(item, row.breakdowns[planId] ?? emptyBreakdown())) >
+          0.0005,
+      ),
     ),
   );
+}
+
+function emptyBreakdown(): StackBreakdown {
+  return {
+    usageCharges: 0,
+    dailySupplyCharges: 0,
+    retailerFees: 0,
+    oneOffFees: 0,
+    gst: 0,
+    exportCredits: 0,
+  };
+}
+
+export function stackTotal(
+  breakdown: StackBreakdown,
+  items: StackItem[],
+): number {
+  return items.reduce((sum, item) => sum + stackChartValue(item, breakdown), 0);
 }

@@ -7,8 +7,8 @@ import {
   comparePlansByPeriod,
   type PeriodGrain,
 } from "@/lib/usage/periodSeries";
-import { comparisonPair } from "@/lib/chart/stack";
-import { StackedPairChart } from "@/components/StackedPairChart";
+import { orderedChartPlans } from "@/lib/chart/stack";
+import { StackedPlansChart } from "@/components/StackedPlansChart";
 import { Button } from "@/components/ui/button";
 
 export function PeriodOverTime({
@@ -21,20 +21,25 @@ export function PeriodOverTime({
   currentPlanId: string | null;
 }) {
   const [grain, setGrain] = useState<PeriodGrain>("week");
-  const { current, target } = comparisonPair(plans, currentPlanId);
+  const chartPlans = orderedChartPlans(plans, currentPlanId);
 
   const rows = useMemo(() => {
-    if (!intervals || intervals.length === 0 || !current || !target) return [];
-    return comparePlansByPeriod(intervals, [current, target], grain).map(
-      (row) => ({
-        label: row.label,
-        usageKwh: row.usageKwh,
-        exportKwh: row.exportKwh,
-        current: row.breakdowns[current.id]!,
-        target: row.breakdowns[target.id]!,
-      }),
-    );
-  }, [current, grain, intervals, target]);
+    if (!intervals || intervals.length === 0 || chartPlans.length < 2) return [];
+    return comparePlansByPeriod(
+      intervals,
+      plans.filter((plan) => chartPlans.some((entry) => entry.id === plan.id)),
+      grain,
+    ).map((row) => ({
+      label: row.label,
+      usageKwh: row.usageKwh,
+      exportKwh: row.exportKwh,
+      breakdowns: row.breakdowns,
+    }));
+  }, [chartPlans, grain, intervals, plans]);
+
+  const planSummary = chartPlans
+    .map((plan) => `${plan.label}${plan.isCurrent ? " (current)" : ""}`)
+    .join(" · ");
 
   return (
     <div className="flex flex-col gap-3">
@@ -64,25 +69,18 @@ export function PeriodOverTime({
 
       {!intervals || intervals.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Load usage from Amber to compare current and target plan costs by week
-          or month.
+          Load usage from Amber to compare selected plan costs by week or month.
         </p>
-      ) : !current || !target ? (
+      ) : chartPlans.length < 2 ? (
         <p className="text-sm text-muted-foreground">
-          Select a current plan and one other plan to compare over time.
+          Select at least two plans to compare over time.
         </p>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">
-            {current.providerName} (current) vs {target.providerName}
-            {currentPlanId
-              ? ""
-              : ". Mark a current plan to choose which side is current."}
-          </p>
-          <StackedPairChart
+          <p className="text-xs text-muted-foreground">{planSummary}</p>
+          <StackedPlansChart
+            plans={chartPlans}
             rows={rows}
-            currentLabel={current.providerName}
-            targetLabel={target.providerName}
             heightClass="h-80"
           />
         </>
