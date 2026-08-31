@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { bucketBySchedule, profileFromIntervals } from "@/lib/usage/bucket";
+import {
+  bucketBySchedule,
+  profileForPlan,
+  profileFromIntervals,
+} from "@/lib/usage/bucket";
 import { toHourlyUsage } from "@/lib/usage/hourly";
 import type { MeterInterval } from "@/lib/usage/intervals";
 import {
@@ -145,6 +149,25 @@ describe("toHourlyUsage", () => {
       "Australia/Melbourne",
     );
     expect(hours[0]?.hourStartLocal).toBe("2026-01-15T16:00:00+11:00");
+  });
+});
+
+describe("profileForPlan", () => {
+  it("uses interval timestamps for a TOU plan and falls back without intervals", () => {
+    const intervals = [interval("2026-07-15T06:00:00.000Z", "general", 2)];
+    const withIntervals = profileForPlan(
+      intervals,
+      { usageTou: VIC_RESIDENTIAL_TOU_2026 },
+      { billingDays: 1, usageKwh: { total: 99 }, exportKwh: {} },
+    );
+    expect(withIntervals.profile.usageKwh.peak).toBe(2);
+
+    const fallback = profileForPlan(
+      null,
+      { usageTou: VIC_RESIDENTIAL_TOU_2026 },
+      { billingDays: 1, usageKwh: { total: 99 }, exportKwh: {} },
+    );
+    expect(fallback.profile.usageKwh).toEqual({ total: 99 });
   });
 });
 

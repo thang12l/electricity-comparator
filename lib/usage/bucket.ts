@@ -125,3 +125,14 @@ export function profileFromIntervals(
 
   return bucketBySchedule(intervals, usageSchedule, exportTou ?? usageSchedule);
 }
+
+export function profileForPlan(
+  intervals: MeterInterval[] | null,
+  plan: { usageTou?: TouSchedule; exportTou?: TouSchedule },
+  fallback: UsageProfile,
+): IntervalBucket {
+  if (!intervals || intervals.length === 0) {
+    return { profile: fallback, controlledLoadKwh: 0, warnings: [] };
+  }
+  return profileFromIntervals(intervals, plan.usageTou, plan.exportTou);
+}
