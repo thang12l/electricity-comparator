@@ -7,7 +7,8 @@ import {
   comparePlansByPeriod,
   type PeriodGrain,
 } from "@/lib/usage/periodSeries";
-import { PeriodComparisonChart } from "@/components/PeriodComparisonChart";
+import { comparisonPair } from "@/lib/chart/stack";
+import { StackedPairChart } from "@/components/StackedPairChart";
 import { Button } from "@/components/ui/button";
 
 export function PeriodOverTime({
@@ -20,10 +21,7 @@ export function PeriodOverTime({
   currentPlanId: string | null;
 }) {
   const [grain, setGrain] = useState<PeriodGrain>("week");
-
-  const current =
-    plans.find((plan) => plan.id === currentPlanId) ?? plans[0];
-  const target = plans.find((plan) => plan.id !== current?.id);
+  const { current, target } = comparisonPair(plans, currentPlanId);
 
   const rows = useMemo(() => {
     if (!intervals || intervals.length === 0 || !current || !target) return [];
@@ -32,8 +30,8 @@ export function PeriodOverTime({
         label: row.label,
         usageKwh: row.usageKwh,
         exportKwh: row.exportKwh,
-        current: row.costs[current.id] ?? 0,
-        target: row.costs[target.id] ?? 0,
+        current: row.breakdowns[current.id]!,
+        target: row.breakdowns[target.id]!,
       }),
     );
   }, [current, grain, intervals, target]);
@@ -81,10 +79,11 @@ export function PeriodOverTime({
               ? ""
               : ". Mark a current plan to choose which side is current."}
           </p>
-          <PeriodComparisonChart
+          <StackedPairChart
             rows={rows}
             currentLabel={current.providerName}
             targetLabel={target.providerName}
+            heightClass="h-80"
           />
         </>
       )}

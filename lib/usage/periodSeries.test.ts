@@ -63,6 +63,8 @@ describe("comparePlansByPeriod", () => {
       6,
     );
     expect(rows[0]?.costs[amber.id]).not.toBe(rows[0]?.costs[agl.id]);
+    expect(rows[0]?.breakdowns[agl.id]?.usageCharges).toBeGreaterThan(0);
+    expect(rows[0]?.breakdowns[agl.id]?.dailySupplyCharges).toBeGreaterThan(0);
   });
 
   it("groups separate months", () => {

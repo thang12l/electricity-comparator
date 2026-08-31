@@ -1,4 +1,5 @@
 import { calculateBill } from "@/lib/calculateBill";
+import { breakdownFromResult, type StackBreakdown } from "@/lib/chart/stack";
 import type { ProviderPlan } from "@/lib/types";
 import { profileForPlan } from "@/lib/usage/bucket";
 import type { MeterInterval } from "@/lib/usage/intervals";
@@ -12,6 +13,7 @@ export type PeriodRow = {
   usageKwh: number;
   exportKwh: number;
   costs: Record<string, number>;
+  breakdowns: Record<string, StackBreakdown>;
 };
 
 const MONTH_LABELS = [
@@ -114,6 +116,7 @@ export function comparePlansByPeriod(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, group]) => {
       const costs: Record<string, number> = {};
+      const breakdowns: Record<string, StackBreakdown> = {};
       for (const plan of plans) {
         const bucketed = profileForPlan(group.intervals, plan, {
           billingDays: 0,
@@ -125,12 +128,14 @@ export function comparePlansByPeriod(
           oneOffFees: 0,
         });
         costs[plan.id] = result.billTotal;
+        breakdowns[plan.id] = breakdownFromResult(result);
       }
       return {
         key,
         label: group.label,
         ...periodUsage(group.intervals),
         costs,
+        breakdowns,
       };
     });
 }
