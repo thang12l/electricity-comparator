@@ -19,7 +19,10 @@ function clampPercent(n: number): number {
 
 function hasTouUsage(usage: UsageProfile["usageKwh"]): boolean {
   return (
-    isDefined(usage.peak) || isDefined(usage.shoulder) || isDefined(usage.offPeak)
+    isDefined(usage.peak) ||
+    isDefined(usage.shoulder) ||
+    isDefined(usage.solarSoak) ||
+    isDefined(usage.offPeak)
   );
 }
 
@@ -29,7 +32,10 @@ function hasTouExport(exportKwh: UsageProfile["exportKwh"]): boolean {
 
 function hasTouUsageRates(rates: ProviderPlan["usageRates"]): boolean {
   return (
-    isDefined(rates.peak) || isDefined(rates.shoulder) || isDefined(rates.offPeak)
+    isDefined(rates.peak) ||
+    isDefined(rates.shoulder) ||
+    isDefined(rates.solarSoak) ||
+    isDefined(rates.offPeak)
   );
 }
 
@@ -38,7 +44,12 @@ function hasTouFeedInRates(rates: ProviderPlan["feedInRates"]): boolean {
 }
 
 function sumTouUsage(usage: UsageProfile["usageKwh"]): number {
-  return (usage.peak ?? 0) + (usage.shoulder ?? 0) + (usage.offPeak ?? 0);
+  return (
+    (usage.peak ?? 0) +
+    (usage.shoulder ?? 0) +
+    (usage.solarSoak ?? 0) +
+    (usage.offPeak ?? 0)
+  );
 }
 
 function sumTouExport(exportKwh: UsageProfile["exportKwh"]): number {
@@ -68,7 +79,12 @@ export function needsExportPeakSplit(
 }
 
 function chargeTouUsage(
-  usage: { peak?: number; shoulder?: number; offPeak?: number },
+  usage: {
+    peak?: number;
+    shoulder?: number;
+    solarSoak?: number;
+    offPeak?: number;
+  },
   rates: ProviderPlan["usageRates"],
   warnings: BillWarning[],
 ): number {
@@ -77,7 +93,7 @@ function chargeTouUsage(
   const applyBucket = (
     kwh: number | undefined,
     rate: number | undefined,
-    bucket: "peak" | "shoulder" | "offPeak",
+    bucket: "peak" | "shoulder" | "solarSoak" | "offPeak",
     label: string,
   ) => {
     if (!isDefined(kwh) || kwh === 0) return;
@@ -106,6 +122,21 @@ function chargeTouUsage(
 
   applyBucket(usage.peak, rates.peak, "peak", "Peak");
   applyBucket(usage.shoulder, rates.shoulder, "shoulder", "Shoulder");
+  if (isDefined(usage.solarSoak) && usage.solarSoak !== 0) {
+    if (isDefined(rates.solarSoak)) {
+      total += usage.solarSoak * rates.solarSoak;
+    } else if (isDefined(rates.shoulder)) {
+      total += usage.solarSoak * rates.shoulder;
+      warnings.push({
+        code: "missing_rate_fallback",
+        bucket: "solarSoak",
+        message:
+          "Solar soak usage was billed at the shoulder rate because this plan has no solar soak rate.",
+      });
+    } else {
+      applyBucket(usage.solarSoak, undefined, "solarSoak", "Solar soak");
+    }
+  }
   applyBucket(usage.offPeak, rates.offPeak, "offPeak", "Off-peak");
   return total;
 }

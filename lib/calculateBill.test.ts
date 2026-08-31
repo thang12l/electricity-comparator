@@ -104,6 +104,38 @@ describe("calculateBill", () => {
     expect(atHalf.exportCredits).toBeCloseTo(100 * 0.27 + 100 * 0.02, 6);
   });
 
+  it("charges solar soak at its own rate when present", () => {
+    const plan: ProviderPlan = {
+      ...agl,
+      usageRates: { peak: 0.4, solarSoak: 0.2, offPeak: 0.1 },
+    };
+    const profile: UsageProfile = {
+      billingDays: 1,
+      usageKwh: { peak: 10, solarSoak: 20, offPeak: 30 },
+      exportKwh: {},
+    };
+    const result = calculateBill(profile, plan);
+    expect(result.usageCharges).toBeCloseTo(10 * 0.4 + 20 * 0.2 + 30 * 0.1, 6);
+  });
+
+  it("maps solar soak usage to the shoulder rate when soak is missing", () => {
+    const profile: UsageProfile = {
+      billingDays: 1,
+      usageKwh: { peak: 1, solarSoak: 8, offPeak: 1 },
+      exportKwh: {},
+    };
+    const result = calculateBill(profile, agl);
+    expect(result.usageCharges).toBeCloseTo(
+      1 * 0.45386 + 8 * 0.24024 + 1 * 0.06633,
+      6,
+    );
+    expect(
+      result.warnings.some(
+        (w) => w.code === "missing_rate_fallback" && w.bucket === "solarSoak",
+      ),
+    ).toBe(true);
+  });
+
   it("falls back missing shoulder usage to the off-peak rate with a warning", () => {
     const plan: ProviderPlan = {
       ...agl,

@@ -8,6 +8,7 @@ import { ProviderPicker } from "@/components/ProviderPicker";
 import { CustomPlanForm } from "@/components/CustomPlanForm";
 import { PeakSplitPrompt } from "@/components/PeakSplitPrompt";
 import { ComparisonTable } from "@/components/ComparisonTable";
+import { AmberImportDialog } from "@/components/AmberImportDialog";
 import {
   calculateBill,
   needsExportPeakSplit,
@@ -16,8 +17,11 @@ import {
 import { useSavedState } from "@/lib/useSavedState";
 import { presetPlans } from "@/data/presetPlans";
 import type { ProviderPlan } from "@/lib/types";
+import type { MeterInterval } from "@/lib/usage/intervals";
+import { profileForPlan, profileFromIntervals } from "@/lib/usage/bucket";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -31,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 const ComparisonChart = dynamic(
   () =>
@@ -42,6 +47,10 @@ export function BillComparator() {
   const { state, setState } = useSavedState();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<ProviderPlan | undefined>();
+  const [amberOpen, setAmberOpen] = useState(false);
+  const [intervals, setIntervals] = useState<MeterInterval[] | null>(null);
+  const [amberSource, setAmberSource] = useState<string | undefined>();
+  const [formEpoch, setFormEpoch] = useState(0);
 
   const selectedPlans = useMemo(() => {
     const customById = new Map(state.customPlans.map((plan) => [plan.id, plan]));
@@ -53,22 +62,30 @@ export function BillComparator() {
       .filter((plan): plan is ProviderPlan => Boolean(plan));
   }, [state.customPlans, state.selectedPlanIds]);
 
-  const showUsageSplit = selectedPlans.some((plan) =>
-    needsUsagePeakSplit(state.profile, plan),
-  );
-  const showExportSplit = selectedPlans.some((plan) =>
-    needsExportPeakSplit(state.profile, plan),
-  );
+  const usingIntervals = Boolean(intervals && intervals.length > 0);
+
+  const showUsageSplit =
+    !usingIntervals &&
+    selectedPlans.some((plan) => needsUsagePeakSplit(state.profile, plan));
+  const showExportSplit =
+    !usingIntervals &&
+    selectedPlans.some((plan) => needsExportPeakSplit(state.profile, plan));
 
   const results = useMemo(
     () =>
-      selectedPlans.map((plan) =>
-        calculateBill(state.profile, plan, {
+      selectedPlans.map((plan) => {
+        const bucketed = profileForPlan(intervals, plan, state.profile);
+        const result = calculateBill(bucketed.profile, plan, {
           usagePeakPercent: state.usagePeakPercent,
           exportPeakPercent: state.exportPeakPercent,
-        }),
-      ),
+        });
+        return {
+          ...result,
+          warnings: [...bucketed.warnings, ...result.warnings],
+        };
+      }),
     [
+      intervals,
       selectedPlans,
       state.exportPeakPercent,
       state.profile,
@@ -98,7 +115,8 @@ export function BillComparator() {
         <p className="max-w-2xl text-muted-foreground">
           Enter one billing period from your own bill, pick retailer plans, and
           see usage charges, supply, fees, GST, and solar credits side by side.
-          Nothing leaves this browser.
+          Typed figures stay in this browser. An Amber import uses the API key
+          you enter for this page only — it is not saved.
         </p>
       </header>
 
@@ -117,27 +135,51 @@ export function BillComparator() {
             <CardHeader>
               <CardTitle>Your usage</CardTitle>
               <CardDescription>
-                Copy figures from one bill. Totals and time-of-use splits are
-                both supported.
+                Copy figures from one bill, or load interval usage from Amber.
               </CardDescription>
+              <CardAction>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAmberOpen(true)}
+                >
+                  Load from Amber
+                </Button>
+              </CardAction>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-4">
+              {usingIntervals ? (
+                <p className="text-xs text-muted-foreground">
+                  Using Amber interval data
+                  {amberSource ? ` for ${amberSource}` : ""}. Time-of-use plans
+                  are billed from those timestamps. The API key was not saved.
+                  Edit a usage field to switch back to typed figures.
+                </p>
+              ) : null}
               <UsageInputForm
+                key={formEpoch}
                 profile={state.profile}
                 usageMode={state.usageMode}
                 exportMode={state.exportMode}
-                onProfileChange={(updater) =>
+                onProfileChange={(updater) => {
+                  setIntervals(null);
+                  setAmberSource(undefined);
                   setState((current) => ({
                     ...current,
                     profile: updater(current.profile),
-                  }))
-                }
-                onUsageModeChange={(usageMode) =>
-                  setState((current) => ({ ...current, usageMode }))
-                }
-                onExportModeChange={(exportMode) =>
-                  setState((current) => ({ ...current, exportMode }))
-                }
+                  }));
+                }}
+                onUsageModeChange={(usageMode) => {
+                  setIntervals(null);
+                  setAmberSource(undefined);
+                  setState((current) => ({ ...current, usageMode }));
+                }}
+                onExportModeChange={(exportMode) => {
+                  setIntervals(null);
+                  setAmberSource(undefined);
+                  setState((current) => ({ ...current, exportMode }));
+                }}
               />
             </CardContent>
           </Card>
@@ -242,6 +284,23 @@ export function BillComparator() {
           </Card>
         </div>
       </div>
+
+      <AmberImportDialog
+        open={amberOpen}
+        onOpenChange={setAmberOpen}
+        onLoaded={(result) => {
+          const totals = profileFromIntervals(result.intervals);
+          setIntervals(result.intervals);
+          setAmberSource(`${result.network} · ${result.nmi}`);
+          setFormEpoch((current) => current + 1);
+          setState((current) => ({
+            ...current,
+            usageMode: "total",
+            exportMode: "total",
+            profile: totals.profile,
+          }));
+        }}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

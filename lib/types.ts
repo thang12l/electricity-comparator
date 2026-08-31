@@ -1,9 +1,26 @@
+export type TouPeriod = "peak" | "shoulder" | "solarSoak" | "offPeak";
+
+export type TouWeekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+export type TouWindow = {
+  period: TouPeriod;
+  days: TouWeekday[];
+  startLocal: string;
+  endLocal: string;
+};
+
+export type TouSchedule = {
+  timeZone: string;
+  windows: TouWindow[];
+};
+
 export type UsageProfile = {
   billingDays: number;
   usageKwh: {
     total?: number;
     peak?: number;
     shoulder?: number;
+    solarSoak?: number;
     offPeak?: number;
   };
   exportKwh: {
@@ -22,6 +39,7 @@ export type ProviderPlan = {
     flat?: number;
     peak?: number;
     shoulder?: number;
+    solarSoak?: number;
     offPeak?: number;
   };
   feedInRates: {
@@ -29,6 +47,8 @@ export type ProviderPlan = {
     peak?: number;
     offPeak?: number;
   };
+  usageTou?: TouSchedule;
+  exportTou?: TouSchedule;
   retailerFee?: number;
   oneOffFees?: number;
   gstInclusive: boolean;
@@ -38,7 +58,13 @@ export type ProviderPlan = {
 export type BillWarning = {
   code: "missing_rate_fallback" | "peak_split_assumption";
   message: string;
-  bucket?: "peak" | "shoulder" | "offPeak" | "exportPeak" | "exportOffPeak";
+  bucket?:
+    | "peak"
+    | "shoulder"
+    | "solarSoak"
+    | "offPeak"
+    | "exportPeak"
+    | "exportOffPeak";
 };
 
 export type BillResult = {

@@ -1,4 +1,8 @@
 import type { PresetPlan } from "@/lib/types";
+import {
+  VIC_RESIDENTIAL_EXPORT_TOU_2026,
+  VIC_RESIDENTIAL_TOU_2026,
+} from "@/lib/usage/vicResidentialTou";
 
 export const PRESET_LAST_VERIFIED = "2026-08-31";
 
@@ -28,17 +32,19 @@ export const presetPlans: PresetPlan[] = [
     dailySupplyCharge: 1.6896,
     usageRates: {
       peak: 0.45386,
-      shoulder: 0.24024,
+      solarSoak: 0.24024,
       offPeak: 0.06633,
     },
     feedInRates: {
       peak: 0.27,
       offPeak: 0.02,
     },
+    usageTou: VIC_RESIDENTIAL_TOU_2026,
+    exportTou: VIC_RESIDENTIAL_EXPORT_TOU_2026,
     gstInclusive: true,
     lastUpdated: PRESET_LAST_VERIFIED,
     notes:
-      "Example rates from prior analysis. Verify current AGL rates before switching — retailer pricing changes.",
+      "Example rates from prior analysis. Usage windows follow the Vic 2026–27 residential TOU (solar soak 11:00–16:00, peak 16:00–21:00, local time, every day). Verify current AGL rates before switching.",
   },
 ];
 
