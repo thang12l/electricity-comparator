@@ -45,7 +45,9 @@ async function amberGet(
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
-  if (response.status === 401) return "API key is missing or invalid";
+  if (response.status === 401 || response.status === 403) {
+    return "API key is missing or invalid";
+  }
   if (response.status === 404) return "Site not found";
   if (response.status === 422) return "Requested date range is greater than 7 days";
   return fallback;

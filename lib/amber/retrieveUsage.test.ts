@@ -72,4 +72,16 @@ describe("retrieveAmberUsage", () => {
       } satisfies Partial<AmberApiError>,
     );
   });
+
+  it("maps a 403 to an invalid-key error", async () => {
+    const fetchImpl: typeof fetch = async () =>
+      new Response("", { status: 403 });
+    await expect(retrieveAmberUsage("bad", { fetchImpl })).rejects.toMatchObject(
+      {
+        name: "AmberApiError",
+        status: 403,
+        message: "API key is missing or invalid",
+      } satisfies Partial<AmberApiError>,
+    );
+  });
 });
