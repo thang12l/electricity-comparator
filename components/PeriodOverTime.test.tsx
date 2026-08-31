@@ -37,7 +37,8 @@ describe("PeriodOverTime", () => {
       />,
     );
 
-    expect(screen.getByText("Amber (current) vs AGL")).toBeTruthy();
+    expect(screen.getByText(/Amber \(current\)/)).toBeTruthy();
+    expect(screen.getByText(/AGL/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Week" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -48,7 +49,8 @@ describe("PeriodOverTime", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText("Amber (current) vs AGL")).toBeTruthy();
+    expect(screen.getByText(/Amber \(current\)/)).toBeTruthy();
+    expect(screen.getByText(/AGL/)).toBeTruthy();
   });
 
   it("asks for Amber usage when intervals are missing", () => {
@@ -60,7 +62,7 @@ describe("PeriodOverTime", () => {
       />,
     );
     expect(
-      screen.getByText(/Load usage from Amber to compare current and target/),
+      screen.getByText(/Load usage from Amber to compare selected plan costs/),
     ).toBeTruthy();
   });
 });
