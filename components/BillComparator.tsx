@@ -43,6 +43,11 @@ const ComparisonChart = dynamic(
   { ssr: false },
 );
 
+const PeriodOverTime = dynamic(
+  () => import("@/components/PeriodOverTime").then((mod) => mod.PeriodOverTime),
+  { ssr: false },
+);
+
 export function BillComparator() {
   const { state, setState } = useSavedState();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -280,6 +285,11 @@ export function BillComparator() {
                   ) : null}
                 </>
               )}
+              <PeriodOverTime
+                intervals={intervals}
+                plans={selectedPlans}
+                currentPlanId={state.currentPlanId}
+              />
             </CardContent>
           </Card>
         </div>
