@@ -52,6 +52,12 @@ function RateSummary({ plan }: { plan: ProviderPlan }) {
           <dd>{formatRate(usage.shoulder, "/kWh")}</dd>
         </>
       ) : null}
+      {usage.solarSoak !== undefined ? (
+        <>
+          <dt className="text-muted-foreground">Solar soak</dt>
+          <dd>{formatRate(usage.solarSoak, "/kWh")}</dd>
+        </>
+      ) : null}
       {usage.offPeak !== undefined ? (
         <>
           <dt className="text-muted-foreground">Off-peak</dt>
