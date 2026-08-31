@@ -39,7 +39,7 @@ const ComparisonChart = dynamic(
 );
 
 export function BillComparator() {
-  const { state, setState } = useSavedState();
+  const { state, setState, formKey } = useSavedState();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<ProviderPlan | undefined>();
 
@@ -123,11 +123,15 @@ export function BillComparator() {
             </CardHeader>
             <CardContent>
               <UsageInputForm
+                key={formKey}
                 profile={state.profile}
                 usageMode={state.usageMode}
                 exportMode={state.exportMode}
-                onProfileChange={(profile) =>
-                  setState((current) => ({ ...current, profile }))
+                onProfileChange={(updater) =>
+                  setState((current) => ({
+                    ...current,
+                    profile: updater(current.profile),
+                  }))
                 }
                 onUsageModeChange={(usageMode) =>
                   setState((current) => ({ ...current, usageMode }))

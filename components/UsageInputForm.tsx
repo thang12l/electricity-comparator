@@ -2,17 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import type { UsageProfile } from "@/lib/types";
 import { parseNonNegative } from "@/lib/format";
 import type { UsageMode } from "@/lib/useSavedState";
+import { Field } from "@base-ui/react/field";
 
 type Props = {
   profile: UsageProfile;
   usageMode: UsageMode;
   exportMode: UsageMode;
-  onProfileChange: (profile: UsageProfile) => void;
+  onProfileChange: (updater: (profile: UsageProfile) => UsageProfile) => void;
   onUsageModeChange: (mode: UsageMode) => void;
   onExportModeChange: (mode: UsageMode) => void;
 };
@@ -28,27 +29,18 @@ function NumberField({
   label: string;
   hint?: string;
   value: number | undefined;
-  onCommit: (value: number | undefined, error?: string) => void;
+  onCommit: (value: number | undefined) => void;
 }) {
   const [raw, setRaw] = useState(value === undefined ? "" : String(value));
   const [error, setError] = useState<string | undefined>();
-  const [lastValue, setLastValue] = useState(value);
-
-  if (value !== lastValue) {
-    setLastValue(value);
-    setRaw(value === undefined ? "" : String(value));
-    setError(undefined);
-  }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <Field.Root className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
-        type="number"
+        type="text"
         inputMode="decimal"
-        min={0}
-        step="any"
         value={raw}
         aria-invalid={Boolean(error)}
         onChange={(event) => {
@@ -59,13 +51,9 @@ function NumberField({
           if (!parsed.error) onCommit(parsed.value);
         }}
       />
-      {hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      ) : null}
-      {error ? (
-        <p className="text-xs text-destructive">{error}</p>
-      ) : null}
-    </div>
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </Field.Root>
   );
 }
 
@@ -93,7 +81,10 @@ export function UsageInputForm({
         hint="Number of days in this bill period."
         value={profile.billingDays || undefined}
         onCommit={(value) =>
-          onProfileChange({ ...profile, billingDays: value ?? 0 })
+          onProfileChange((current) => ({
+            ...current,
+            billingDays: value ?? 0,
+          }))
         }
       />
 
@@ -110,17 +101,17 @@ export function UsageInputForm({
               onCheckedChange={(checked) => {
                 const nextMode = checked ? "tou" : "total";
                 onUsageModeChange(nextMode);
-                onProfileChange({
-                  ...profile,
+                onProfileChange((current) => ({
+                  ...current,
                   usageKwh:
                     nextMode === "tou"
                       ? {
-                          peak: profile.usageKwh.peak,
-                          shoulder: profile.usageKwh.shoulder,
-                          offPeak: profile.usageKwh.offPeak,
+                          peak: current.usageKwh.peak,
+                          shoulder: current.usageKwh.shoulder,
+                          offPeak: current.usageKwh.offPeak,
                         }
-                      : { total: profile.usageKwh.total },
-                });
+                      : { total: current.usageKwh.total },
+                }));
               }}
             />
             <span>Time-of-use</span>
@@ -133,10 +124,10 @@ export function UsageInputForm({
             label="Total usage (kWh)"
             value={profile.usageKwh.total}
             onCommit={(value) =>
-              onProfileChange({
-                ...profile,
+              onProfileChange((current) => ({
+                ...current,
                 usageKwh: { total: value },
-              })
+              }))
             }
           />
         ) : (
@@ -146,10 +137,14 @@ export function UsageInputForm({
               label="Peak (kWh)"
               value={profile.usageKwh.peak}
               onCommit={(value) =>
-                onProfileChange({
-                  ...profile,
-                  usageKwh: { ...profile.usageKwh, total: undefined, peak: value },
-                })
+                onProfileChange((current) => ({
+                  ...current,
+                  usageKwh: {
+                    ...current.usageKwh,
+                    total: undefined,
+                    peak: value,
+                  },
+                }))
               }
             />
             <NumberField
@@ -157,14 +152,14 @@ export function UsageInputForm({
               label="Shoulder (kWh)"
               value={profile.usageKwh.shoulder}
               onCommit={(value) =>
-                onProfileChange({
-                  ...profile,
+                onProfileChange((current) => ({
+                  ...current,
                   usageKwh: {
-                    ...profile.usageKwh,
+                    ...current.usageKwh,
                     total: undefined,
                     shoulder: value,
                   },
-                })
+                }))
               }
             />
             <NumberField
@@ -172,14 +167,14 @@ export function UsageInputForm({
               label="Off-peak (kWh)"
               value={profile.usageKwh.offPeak}
               onCommit={(value) =>
-                onProfileChange({
-                  ...profile,
+                onProfileChange((current) => ({
+                  ...current,
                   usageKwh: {
-                    ...profile.usageKwh,
+                    ...current.usageKwh,
                     total: undefined,
                     offPeak: value,
                   },
-                })
+                }))
               }
             />
           </div>
@@ -201,16 +196,16 @@ export function UsageInputForm({
               onCheckedChange={(checked) => {
                 const nextMode = checked ? "tou" : "total";
                 onExportModeChange(nextMode);
-                onProfileChange({
-                  ...profile,
+                onProfileChange((current) => ({
+                  ...current,
                   exportKwh:
                     nextMode === "tou"
                       ? {
-                          peak: profile.exportKwh.peak,
-                          offPeak: profile.exportKwh.offPeak,
+                          peak: current.exportKwh.peak,
+                          offPeak: current.exportKwh.offPeak,
                         }
-                      : { total: profile.exportKwh.total },
-                });
+                      : { total: current.exportKwh.total },
+                }));
               }}
             />
             <span>Time-of-use</span>
@@ -223,10 +218,10 @@ export function UsageInputForm({
             label="Total export (kWh)"
             value={profile.exportKwh.total}
             onCommit={(value) =>
-              onProfileChange({
-                ...profile,
+              onProfileChange((current) => ({
+                ...current,
                 exportKwh: { total: value },
-              })
+              }))
             }
           />
         ) : (
@@ -236,14 +231,14 @@ export function UsageInputForm({
               label="Peak export (kWh)"
               value={profile.exportKwh.peak}
               onCommit={(value) =>
-                onProfileChange({
-                  ...profile,
+                onProfileChange((current) => ({
+                  ...current,
                   exportKwh: {
-                    ...profile.exportKwh,
+                    ...current.exportKwh,
                     total: undefined,
                     peak: value,
                   },
-                })
+                }))
               }
             />
             <NumberField
@@ -251,14 +246,14 @@ export function UsageInputForm({
               label="Off-peak export (kWh)"
               value={profile.exportKwh.offPeak}
               onCommit={(value) =>
-                onProfileChange({
-                  ...profile,
+                onProfileChange((current) => ({
+                  ...current,
                   exportKwh: {
-                    ...profile.exportKwh,
+                    ...current.exportKwh,
                     total: undefined,
                     offPeak: value,
                   },
-                })
+                }))
               }
             />
           </div>
