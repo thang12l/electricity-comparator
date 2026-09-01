@@ -116,7 +116,7 @@ export function comparePlansByPeriod(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, group]) => {
       const costs: Record<string, number> = {};
-      const breakdowns: Record<string, StackBreakdown> = {};
+      const breakdowns: Record<string, ChartBreakdown> = {};
       for (const plan of plans) {
         const bucketed = profileForPlan(group.intervals, plan, {
           billingDays: 0,
