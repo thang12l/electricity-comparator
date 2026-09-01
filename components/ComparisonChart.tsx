@@ -2,7 +2,7 @@
 
 import type { BillResult, ProviderPlan } from "@/lib/types";
 import {
-  breakdownFromResult,
+  chartBreakdownFromResult,
   orderedChartPlans,
 } from "@/lib/chart/stack";
 import { StackedPlansChart } from "@/components/StackedPlansChart";
@@ -26,7 +26,10 @@ export function ComparisonChart({ plans, results, currentPlanId }: Props) {
 
   const resultByPlan = new Map(results.map((result) => [result.planId, result]));
   const breakdowns = Object.fromEntries(
-    chartPlans.map((plan) => [plan.id, breakdownFromResult(resultByPlan.get(plan.id))]),
+    chartPlans.map((plan) => [
+      plan.id,
+      chartBreakdownFromResult(resultByPlan.get(plan.id)),
+    ]),
   );
 
   return (

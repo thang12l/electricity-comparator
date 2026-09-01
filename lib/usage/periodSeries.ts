@@ -1,5 +1,5 @@
 import { calculateBill } from "@/lib/calculateBill";
-import { breakdownFromResult, type StackBreakdown } from "@/lib/chart/stack";
+import { chartBreakdownFromResult, type ChartBreakdown } from "@/lib/chart/stack";
 import type { ProviderPlan } from "@/lib/types";
 import { profileForPlan } from "@/lib/usage/bucket";
 import type { MeterInterval } from "@/lib/usage/intervals";
@@ -13,7 +13,7 @@ export type PeriodRow = {
   usageKwh: number;
   exportKwh: number;
   costs: Record<string, number>;
-  breakdowns: Record<string, StackBreakdown>;
+  breakdowns: Record<string, ChartBreakdown>;
 };
 
 const MONTH_LABELS = [
@@ -128,7 +128,7 @@ export function comparePlansByPeriod(
           oneOffFees: 0,
         });
         costs[plan.id] = result.billTotal;
-        breakdowns[plan.id] = breakdownFromResult(result);
+        breakdowns[plan.id] = chartBreakdownFromResult(result);
       }
       return {
         key,

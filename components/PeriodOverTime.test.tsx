@@ -37,8 +37,7 @@ describe("PeriodOverTime", () => {
       />,
     );
 
-    expect(screen.getByText(/Amber \(current\)/)).toBeTruthy();
-    expect(screen.getByText(/AGL/)).toBeTruthy();
+    expect(screen.getByText("Amber (current) · AGL")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Week" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -49,8 +48,7 @@ describe("PeriodOverTime", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText(/Amber \(current\)/)).toBeTruthy();
-    expect(screen.getByText(/AGL/)).toBeTruthy();
+    expect(screen.getByText("Amber (current) · AGL")).toBeTruthy();
   });
 
   it("asks for Amber usage when intervals are missing", () => {

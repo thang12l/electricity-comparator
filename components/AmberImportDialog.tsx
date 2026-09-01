@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  readAmberApiKey,
+  writeAmberApiKey,
+} from "@/lib/amber/apiKeyStorage";
+import { fetchAmberConfig, fetchAmberUsage } from "@/lib/amber/fetchUsage";
+import { writeAmberUsage } from "@/lib/amber/usageStorage";
 import type { MeterInterval } from "@/lib/usage/intervals";
 
 type LoadedUsage = {
@@ -29,8 +35,27 @@ type Props = {
 
 export function AmberImportDialog({ open, onOpenChange, onLoaded }: Props) {
   const [apiKey, setApiKey] = useState("");
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [defaultKey, setDefaultKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+
+  useEffect(() => {
+    void fetchAmberConfig()
+      .then((config) => {
+        setDefaultKey(config.defaultKey ?? null);
+      })
+      .catch(() => {
+        setDefaultKey(null);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setSavedKey(readAmberApiKey());
+  }, [open]);
+
+  const availableKey = savedKey ?? defaultKey;
 
   function close() {
     setApiKey("");
@@ -40,7 +65,7 @@ export function AmberImportDialog({ open, onOpenChange, onLoaded }: Props) {
   }
 
   async function handleRetrieve() {
-    const key = apiKey.trim();
+    const key = apiKey.trim() || availableKey?.trim() || "";
     if (!key) {
       setError("Enter your Amber API key to retrieve usage.");
       return;
@@ -48,15 +73,13 @@ export function AmberImportDialog({ open, onOpenChange, onLoaded }: Props) {
     setBusy(true);
     setError(undefined);
     try {
-      const response = await fetch("/api/amber/usage", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      const payload = (await response.json()) as LoadedUsage & { error?: string };
-      if (!response.ok) {
-        setError(payload.error ?? "Could not retrieve Amber usage");
-        return;
+      const payload = await fetchAmberUsage(key);
+      const typedKey = apiKey.trim();
+      if (typedKey || savedKey) {
+        writeAmberApiKey(key);
+        setSavedKey(key);
       }
+      await writeAmberUsage(payload);
       onLoaded({
         siteId: payload.siteId,
         nmi: payload.nmi,
@@ -65,8 +88,12 @@ export function AmberImportDialog({ open, onOpenChange, onLoaded }: Props) {
       });
       setApiKey("");
       onOpenChange(false);
-    } catch {
-      setError("Could not reach the Amber import service.");
+    } catch (retrieveError) {
+      setError(
+        retrieveError instanceof Error
+          ? retrieveError.message
+          : "Could not reach the Amber import service.",
+      );
     } finally {
       setBusy(false);
     }
@@ -87,8 +114,9 @@ export function AmberImportDialog({ open, onOpenChange, onLoaded }: Props) {
         <DialogHeader>
           <DialogTitle>Load usage from Amber</DialogTitle>
           <DialogDescription>
-            Paste a developer API key from the Amber app. It is used for this
-            retrieval only and is not saved.
+            Paste a developer API key from the Amber app. A key you use
+            successfully is saved in this browser so you can retrieve again
+            without re-entering it.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-1.5">
@@ -98,6 +126,7 @@ export function AmberImportDialog({ open, onOpenChange, onLoaded }: Props) {
             type="password"
             autoComplete="off"
             value={apiKey}
+            placeholder={availableKey ?? undefined}
             disabled={busy}
             onChange={(event) => setApiKey(event.target.value)}
             onKeyDown={(event) => {

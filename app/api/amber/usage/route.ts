@@ -1,8 +1,12 @@
 import { retrieveAmberUsage, AmberApiError } from "@/lib/amber/retrieveUsage";
+import { getServerAmberApiKey } from "@/lib/amber/serverApiKey";
 
 export async function POST(request: Request) {
-  const apiKey = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  if (!apiKey.trim()) {
+  const headerKey =
+    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ??
+    "";
+  const apiKey = headerKey || getServerAmberApiKey() || "";
+  if (!apiKey) {
     return Response.json({ error: "API key is required" }, { status: 400 });
   }
 

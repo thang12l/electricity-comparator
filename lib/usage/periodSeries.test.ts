@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { calculateBill } from "@/lib/calculateBill";
+import {
+  chartBreakdownFromResult,
+  chartStackTotal,
+  CHART_STACK_ITEMS,
+} from "@/lib/chart/stack";
 import { getPresetById } from "@/data/presetPlans";
 import type { MeterInterval } from "@/lib/usage/intervals";
 import { profileForPlan } from "@/lib/usage/bucket";
@@ -65,6 +70,7 @@ describe("comparePlansByPeriod", () => {
     expect(rows[0]?.costs[amber.id]).not.toBe(rows[0]?.costs[agl.id]);
     expect(rows[0]?.breakdowns[agl.id]?.usageCharges).toBeGreaterThan(0);
     expect(rows[0]?.breakdowns[agl.id]?.dailySupplyCharges).toBeGreaterThan(0);
+    expect(rows[0]?.breakdowns[agl.id]?.fees).toBeGreaterThanOrEqual(0);
   });
 
   it("groups separate months", () => {
@@ -79,5 +85,23 @@ describe("comparePlansByPeriod", () => {
     expect(rows.map((row) => row.key)).toEqual(["2026-07", "2026-08"]);
     expect(rows[0]?.label).toBe("Jul 2026");
     expect(rows[1]?.usageKwh).toBe(3);
+  });
+
+  it("includes export credits in the stacked chart breakdown total", () => {
+    const rows = comparePlansByPeriod(
+      [
+        interval("2026-06-15T06:00:00.000Z", "general", 100),
+        interval("2026-06-15T07:00:00.000Z", "feedIn", 50),
+      ],
+      [amber],
+      "month",
+    );
+    const breakdown = rows[0]?.breakdowns[amber.id];
+    expect(breakdown?.exportCredits).toBeGreaterThan(0);
+    expect(breakdown?.billTotal).toBeCloseTo(rows[0]?.costs[amber.id] ?? 0, 6);
+    expect(chartStackTotal(breakdown!, CHART_STACK_ITEMS)).toBeCloseTo(
+      breakdown!.billTotal,
+      6,
+    );
   });
 });

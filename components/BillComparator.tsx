@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { ZapIcon } from "lucide-react";
 import { UsageInputForm } from "@/components/UsageInputForm";
@@ -19,6 +19,7 @@ import { presetPlans } from "@/data/presetPlans";
 import type { ProviderPlan } from "@/lib/types";
 import type { MeterInterval } from "@/lib/usage/intervals";
 import { profileForPlan, profileFromIntervals } from "@/lib/usage/bucket";
+import { clearAmberUsage, readAmberUsage } from "@/lib/amber/usageStorage";
 import {
   Card,
   CardAction,
@@ -56,6 +57,43 @@ export function BillComparator() {
   const [intervals, setIntervals] = useState<MeterInterval[] | null>(null);
   const [amberSource, setAmberSource] = useState<string | undefined>();
   const [formEpoch, setFormEpoch] = useState(0);
+
+  const applyAmberUsage = useCallback(
+    (result: {
+      network: string;
+      nmi: string;
+      intervals: MeterInterval[];
+    }) => {
+      const totals = profileFromIntervals(result.intervals);
+      setIntervals(result.intervals);
+      setAmberSource(`${result.network} · ${result.nmi}`);
+      setFormEpoch((current) => current + 1);
+      setState((current) => ({
+        ...current,
+        usageMode: "total",
+        exportMode: "total",
+        profile: totals.profile,
+      }));
+    },
+    [setState],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void readAmberUsage().then((cached) => {
+      if (cancelled || !cached) return;
+      applyAmberUsage(cached);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [applyAmberUsage]);
+
+  function leaveAmberIntervals() {
+    setIntervals(null);
+    setAmberSource(undefined);
+    void clearAmberUsage();
+  }
 
   const selectedPlans = useMemo(() => {
     const customById = new Map(state.customPlans.map((plan) => [plan.id, plan]));
@@ -120,8 +158,9 @@ export function BillComparator() {
         <p className="max-w-2xl text-muted-foreground">
           Enter one billing period from your own bill, pick retailer plans, and
           see usage charges, supply, fees, GST, and solar credits side by side.
-          Typed figures stay in this browser. An Amber import uses the API key
-          you enter for this page only — it is not saved.
+          Typed figures stay in this browser. A successful Amber import saves
+          your API key locally, or set `AMBER_DATA_API_KEY` in `.env` for local
+          development.
         </p>
       </header>
 
@@ -158,8 +197,8 @@ export function BillComparator() {
                 <p className="text-xs text-muted-foreground">
                   Using Amber interval data
                   {amberSource ? ` for ${amberSource}` : ""}. Time-of-use plans
-                  are billed from those timestamps. The API key was not saved.
-                  Edit a usage field to switch back to typed figures.
+                  are billed from those timestamps. Edit a usage field to switch
+                  back to typed figures.
                 </p>
               ) : null}
               <UsageInputForm
@@ -168,21 +207,18 @@ export function BillComparator() {
                 usageMode={state.usageMode}
                 exportMode={state.exportMode}
                 onProfileChange={(updater) => {
-                  setIntervals(null);
-                  setAmberSource(undefined);
+                  leaveAmberIntervals();
                   setState((current) => ({
                     ...current,
                     profile: updater(current.profile),
                   }));
                 }}
                 onUsageModeChange={(usageMode) => {
-                  setIntervals(null);
-                  setAmberSource(undefined);
+                  leaveAmberIntervals();
                   setState((current) => ({ ...current, usageMode }));
                 }}
                 onExportModeChange={(exportMode) => {
-                  setIntervals(null);
-                  setAmberSource(undefined);
+                  leaveAmberIntervals();
                   setState((current) => ({ ...current, exportMode }));
                 }}
               />
@@ -298,18 +334,7 @@ export function BillComparator() {
       <AmberImportDialog
         open={amberOpen}
         onOpenChange={setAmberOpen}
-        onLoaded={(result) => {
-          const totals = profileFromIntervals(result.intervals);
-          setIntervals(result.intervals);
-          setAmberSource(`${result.network} · ${result.nmi}`);
-          setFormEpoch((current) => current + 1);
-          setState((current) => ({
-            ...current,
-            usageMode: "total",
-            exportMode: "total",
-            profile: totals.profile,
-          }));
-        }}
+        onLoaded={applyAmberUsage}
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
